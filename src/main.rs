@@ -1,20 +1,39 @@
+use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry};
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use regex::Regex;
 
 fn main() {
-    let image_path = "/media/bobby/Big/Pictures/Pictures Classic/Gartic Phone";
+    let image_path = OsString::from("/media/bobby/Big/Pictures/Pictures Classic/Gartic Phone");
+    let rounds = rounds_from_directory(image_path);
+    for round in rounds {
+        println!("{}", round.date);
+    }
+}
+
+fn rounds_from_directory(directory_path: OsString) -> Vec<Round> {
     let date_re = Regex::new(r"^album_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})").unwrap();
-    for entry in fs::read_dir(image_path).unwrap() {
+    let mut rounds = Vec::new();
+    for entry in fs::read_dir(directory_path).unwrap() {
         let entry = entry.unwrap();
-        let file_name = entry.file_name();
-        for cap in date_re.captures_iter(file_name.to_str().unwrap()) {
-            // println!("{}, {}, {}, {}, {}, {}", &cap[1], &cap[2], &cap[3], &cap[4], &cap[5], &cap[6]);
+        let image_path = entry.file_name();
+        // let image_path_str = image_path.clone();
+        for cap in date_re.captures_iter(image_path.to_str().unwrap()) {
             let date = Utc.ymd((&cap[1]).parse().unwrap(), (&cap[2]).parse().unwrap(), (&cap[3]).parse().unwrap())
                 .and_hms((&cap[4]).parse().unwrap(), (&cap[5]).parse().unwrap(), (&cap[6]).parse().unwrap());
-            println!("{}", date);
+            rounds.push(Round {
+                image_path, date,
+            });
+            break;
         }
-        // println!("{}", entry.file_name().to_str().unwrap());
     }
+    rounds.sort();
+    return rounds;
+}
+
+#[derive(Eq, Ord, PartialEq, PartialOrd)]
+struct Round {
+    date: DateTime<Utc>,
+    image_path: OsString,
 }
