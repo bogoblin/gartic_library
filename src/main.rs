@@ -1,7 +1,6 @@
 use std::{fs, thread};
 use std::fs::File;
-use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
-use regex::Regex;
+use chrono::{Datelike, DateTime, Timelike, Utc};
 use std::path::{Path, PathBuf};
 use std::thread::JoinHandle;
 use gif;
@@ -35,17 +34,13 @@ fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>)
 }
 
 fn rounds_from_directory(directory_path: &Path) -> Vec<Round> {
-    let date_re = Regex::new(r"album_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.gif$").unwrap();
     let mut rounds = Vec::new();
     for entry in directory_path.read_dir().unwrap() {
         let entry = entry.unwrap();
+        let file_date = entry.metadata().unwrap().modified().unwrap();
         let image_path = entry.path();
-        for cap in date_re.captures_iter(image_path.to_str().unwrap()) {
-            let date = Utc.ymd((&cap[1]).parse().unwrap(), (&cap[2]).parse().unwrap(), (&cap[3]).parse().unwrap())
-                .and_hms((&cap[4]).parse().unwrap(), (&cap[5]).parse().unwrap(), (&cap[6]).parse().unwrap());
-            rounds.push(Round { image_path, date });
-            break;
-        }
+        let date = DateTime::from(file_date);
+        rounds.push(Round { image_path, date });
     }
     rounds.sort();
     return rounds;
