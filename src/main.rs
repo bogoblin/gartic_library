@@ -4,7 +4,8 @@ use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use std::thread::JoinHandle;
-use gif::{Frame};
+use gif;
+use png;
 
 fn main() {
     let image_path = Path::new("/media/bobby/Big/Pictures/Pictures Classic/Gartic Phone");
@@ -80,8 +81,6 @@ struct Round {
 
 impl Round {
     fn output_images(&self, round_dir: PathBuf) {
-        let palette = &self.get_palette();
-
         fs::create_dir_all(round_dir.as_path()).unwrap();
         let file = File::open(&self.image_path).unwrap();
         let mut options = gif::DecodeOptions::new();
@@ -90,25 +89,17 @@ impl Round {
         let mut decoder = options.read_info(&file).unwrap();
         let mut i = 0;
         while let Some(frame) = decoder.read_next_frame().unwrap() {
-            let mut image = File::create(round_dir.join(format!("{:02}.gif", i+1))).unwrap();
+            let mut image = File::create(round_dir.join(format!("{:02}.png", i + 1))).unwrap();
             i += 1;
-            let mut encoder = gif::Encoder::new(
+            let mut encoder = png::Encoder::new(
                 &mut image,
-                frame.width,
-                frame.height,
-                &palette[..],
-            ).unwrap();
-            let new_frame = Frame::from_rgba(frame.width, frame.height, Vec::from(frame.buffer.clone()).as_mut_slice());
-            encoder.write_frame(&new_frame).unwrap();
+                frame.width as u32,
+                frame.height as u32,
+            );
+            encoder.set_color(png::ColorType::Rgba);
+            let mut writer = encoder.write_header().unwrap();
+            writer.write_image_data(Vec::from(frame.buffer.clone()).as_mut_slice()).unwrap();
         }
-    }
-
-    fn get_palette(&self) -> Vec<u8> {
-        let file = File::open(&self.image_path).unwrap();
-        let mut options = gif::DecodeOptions::new();
-        options.set_color_output(gif::ColorOutput::RGBA);
-        let decoder = options.read_info(&file).unwrap();
-        Vec::from(decoder.global_palette().unwrap())
     }
 }
 
