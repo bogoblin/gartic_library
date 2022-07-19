@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, thread};
 use std::fs::File;
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use regex::Regex;
@@ -10,10 +10,16 @@ fn main() {
     let output_path = Path::new("/media/bobby/Big/Projects/Gartic Phone Static");
     let rounds = rounds_from_directory(image_path);
     let games = games_from_rounds(rounds);
-    for game in games {
-        output_game(&output_path, game);
-    }
 
+    let mut handles = vec![];
+    for game in games {
+        handles.push(thread::spawn(move || {
+            output_game(&output_path, game);
+        }));
+    }
+    for handle in handles {
+        handle.join().unwrap();
+    }
 }
 
 fn output_game(output_dir: &Path, game: Game) {
