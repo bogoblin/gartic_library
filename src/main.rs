@@ -3,6 +3,7 @@ use std::fs::File;
 use chrono::{Datelike, DateTime, Timelike, TimeZone, Utc};
 use regex::Regex;
 use std::path::{Path, PathBuf};
+use std::thread::JoinHandle;
 use gif::{Frame};
 
 fn main() {
@@ -13,20 +14,22 @@ fn main() {
 
     let mut handles = vec![];
     for game in games {
-        handles.push(thread::spawn(move || {
-            output_game(&output_path, game);
-        }));
+        output_game(&output_path, game, &mut handles);
     }
     for handle in handles {
         handle.join().unwrap();
     }
 }
 
-fn output_game(output_dir: &Path, game: Game) {
+fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>) {
     let game_dir = output_dir.join(game.dir());
-    for (i, round) in game.rounds.iter().enumerate() {
-        let round_dir = game_dir.join(format!("{:02}", i+1));
-        round.output_images(round_dir);
+    let mut i = 0;
+    for round in game.rounds {
+        i+=1;
+        let round_dir = game_dir.join(format!("{:02}", i));
+        handles.push(thread::spawn(move || {
+            round.output_images(round_dir);
+        }));
     }
 }
 
