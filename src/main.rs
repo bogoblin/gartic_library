@@ -1,5 +1,6 @@
 use std::{fs, thread};
 use std::fs::File;
+use std::io::Write;
 use chrono::{Datelike, DateTime, Timelike, Utc};
 use std::path::{Path, PathBuf};
 use std::thread::JoinHandle;
@@ -31,6 +32,19 @@ fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>)
             round.output_images(round_dir);
         }));
     }
+
+    // Output game html
+    let mut html_page = File::create(game_dir.join("index.html")).unwrap();
+    html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
+    html_page.write("<ul>".as_ref()).unwrap();
+    for round_num in 1..i+1 {
+        html_page.write(format!("<li>\
+        <a href='{:02}'>\
+        <img src='{:02}/round.gif'>\
+        </a>\
+        </li>\n", round_num, round_num).as_ref()).unwrap();
+    }
+    html_page.write("</ul>".as_ref()).unwrap();
 }
 
 fn rounds_from_directory(directory_path: &Path) -> Vec<Round> {
@@ -76,6 +90,7 @@ struct Round {
 
 impl Round {
     fn output_images(&self, round_dir: PathBuf) {
+        // Split gif into separate frames
         fs::create_dir_all(round_dir.as_path()).unwrap();
         let file = File::open(&self.image_path).unwrap();
         let mut options = gif::DecodeOptions::new();
@@ -84,8 +99,8 @@ impl Round {
         let mut decoder = options.read_info(&file).unwrap();
         let mut i = 0;
         while let Some(frame) = decoder.read_next_frame().unwrap() {
-            let mut image = File::create(round_dir.join(format!("{:02}.png", i + 1))).unwrap();
             i += 1;
+            let mut image = File::create(round_dir.join(format!("{:02}.png", i))).unwrap();
             let mut encoder = png::Encoder::new(
                 &mut image,
                 frame.width as u32,
@@ -95,6 +110,16 @@ impl Round {
             let mut writer = encoder.write_header().unwrap();
             writer.write_image_data(Vec::from(frame.buffer.clone()).as_mut_slice()).unwrap();
         }
+
+        // Generate HTML page
+        let mut html_page = File::create(round_dir.join("index.html")).unwrap();
+        html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
+        for round_num in 1..i+1 {
+            html_page.write(format!("<figure><img src='{:02}.png'></figure>\n", round_num).as_ref()).unwrap();
+        }
+
+        // Copy original gif
+        fs::copy(&self.image_path, round_dir.join("round.gif")).unwrap();
     }
 }
 
@@ -103,8 +128,12 @@ struct Game {
 }
 
 impl Game {
+    fn game_date(&self) -> DateTime<Utc> {
+        self.rounds.get(0).unwrap().date
+    }
+
     fn dir(&self) -> PathBuf {
-        let first_date = self.rounds.get(0).unwrap().date;
+        let first_date = self.game_date();
         PathBuf::from(format!("{:04}/{:02}/{:02}/{:02}{:02}{:02}",
                               first_date.year(),
                               first_date.month(),
