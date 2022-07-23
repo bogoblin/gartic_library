@@ -19,8 +19,8 @@ fn main() {
     let mut html_page = html_page(output_path.join("index.html").as_path(), Path::new("."));
     html_page.write("<h1>Gartic Phone Games</h1>".as_ref()).unwrap();
     html_page.write("<section class='games'>".as_ref()).unwrap();
-    let mut handles = vec![];
     for game in games {
+        let mut handles = vec![];
         let mut preview_images = String::new();
         for round_num in 1..=game.rounds.len() {
             preview_images.push_str(format!("<img src='{}/{:02}/01.png'>", game.dir().to_str().unwrap(),  round_num).as_ref());
@@ -31,15 +31,16 @@ fn main() {
         </a>", game.dir().to_str().unwrap(), game.game_date(), preview_images.as_str()).as_ref()).unwrap();
 
         output_game(&output_path, game, &mut handles);
-    }
-    for handle in handles {
-        handle.join().unwrap();
+        for handle in handles {
+            handle.join().unwrap();
+        }
     }
     html_page.write("</section>".as_ref()).unwrap();
 }
 
 fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>) {
     let game_dir = output_dir.join(game.dir());
+    fs::create_dir_all(game_dir.as_path()).unwrap();
     let num_rounds = game.rounds.len();
 
     // Output game html
@@ -53,7 +54,7 @@ fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>)
     html_page.write("</section>\n".as_ref()).unwrap();
 
     for (i, round) in game.rounds.into_iter().enumerate() {
-        let round_dir = game_dir.join(format!("{:02}", i));
+        let round_dir = game_dir.join(format!("{:02}", i+1));
         handles.push(thread::spawn(move || {
             round.output_images(round_dir);
         }));
