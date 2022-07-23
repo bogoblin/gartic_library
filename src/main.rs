@@ -1,4 +1,5 @@
 use std::{fs, thread};
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io::Write;
 use chrono::{Datelike, DateTime, Timelike, Utc};
@@ -13,13 +14,25 @@ fn main() {
     let rounds = rounds_from_directory(image_path);
     let games = games_from_rounds(rounds);
 
+    let mut html_page = File::create(output_path.join("index.html")).unwrap();
+    html_page.write("<ul class='games'>".as_ref()).unwrap();
     let mut handles = vec![];
     for game in games {
+        let mut preview_images = String::new();
+        for round_num in 1..=game.rounds.len() {
+            preview_images.push_str(format!("<img src='{}/{:02}/01.png'>", game.dir().to_str().unwrap(),  round_num).as_ref());
+        }
+        html_page.write(format!("<li class='game'><a href='{}'>\
+        <h2>{}</h2>\
+        {}\
+        </a></li>", game.dir().to_str().unwrap(), game.game_date(), preview_images.as_str()).as_ref()).unwrap();
+
         output_game(&output_path, game, &mut handles);
     }
     for handle in handles {
         handle.join().unwrap();
     }
+    html_page.write("</ul>".as_ref()).unwrap();
 }
 
 fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>) {
@@ -36,9 +49,11 @@ fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>)
     // Output game html
     let mut html_page = File::create(game_dir.join("index.html")).unwrap();
     html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
+    html_page.write("<ul class='rounds'>\n".as_ref()).unwrap();
     for round_num in 1..i+1 {
-        html_page.write(format!("<a href='{:02}'><img src='{:02}/round.gif'></a>\n", round_num, round_num).as_ref()).unwrap();
+        html_page.write(format!("<li class='round'><a href='{:02}'><img src='{:02}/round.gif'></a></li>\n", round_num, round_num).as_ref()).unwrap();
     }
+    html_page.write("</ul>\n".as_ref()).unwrap();
 }
 
 fn rounds_from_directory(directory_path: &Path) -> Vec<Round> {
@@ -73,6 +88,8 @@ fn games_from_rounds(rounds: Vec<Round>) -> Vec<Game> {
         games.push(Game{rounds: rounds[last..i].to_vec()});
         last = i;
     }
+    games.sort();
+    games.reverse();
     return games;
 }
 
@@ -108,15 +125,18 @@ impl Round {
         // Generate HTML page
         let mut html_page = File::create(round_dir.join("index.html")).unwrap();
         html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
-        for round_num in 1..i+1 {
-            html_page.write(format!("<figure><img src='{:02}.png'></figure>\n", round_num).as_ref()).unwrap();
+        html_page.write("<ul class='frames'>\n".as_ref()).unwrap();
+        for frame_num in 1..i+1 {
+            html_page.write(format!("<li class='frame'><img src='{:02}.png'></li>\n", frame_num).as_ref()).unwrap();
         }
+        html_page.write("</ul>\n".as_ref()).unwrap();
 
         // Copy original gif
         fs::copy(&self.image_path, round_dir.join("round.gif")).unwrap();
     }
 }
 
+#[derive(Eq, Clone)]
 struct Game {
     rounds: Vec<Round>,
 }
@@ -136,5 +156,23 @@ impl Game {
                               first_date.minute(),
                               first_date.second(),
         ))
+    }
+}
+
+impl PartialEq<Self> for Game {
+    fn eq(&self, other: &Self) -> bool {
+        self.game_date() == other.game_date()
+    }
+}
+
+impl PartialOrd<Self> for Game {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Game {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.game_date().cmp(&other.game_date())
     }
 }
