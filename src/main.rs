@@ -14,7 +14,9 @@ fn main() {
     let rounds = rounds_from_directory(image_path);
     let games = games_from_rounds(rounds);
 
-    let mut html_page = File::create(output_path.join("index.html")).unwrap();
+    fs::copy(Path::new("./style.css"), output_path.join("style.css")).unwrap();
+
+    let mut html_page = html_page(output_path.join("index.html").as_path(), Path::new("."));
     html_page.write("<ul class='games'>".as_ref()).unwrap();
     let mut handles = vec![];
     for game in games {
@@ -47,7 +49,7 @@ fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>)
     }
 
     // Output game html
-    let mut html_page = File::create(game_dir.join("index.html")).unwrap();
+    let mut html_page = html_page(game_dir.join("index.html").as_path(), Path::new("../../../.."));
     html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
     html_page.write("<ul class='rounds'>\n".as_ref()).unwrap();
     for round_num in 1..i+1 {
@@ -123,7 +125,7 @@ impl Round {
         }
 
         // Generate HTML page
-        let mut html_page = File::create(round_dir.join("index.html")).unwrap();
+        let mut html_page = html_page(round_dir.join("index.html").as_path(), Path::new("../../../../.."));
         html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
         html_page.write("<ul class='frames'>\n".as_ref()).unwrap();
         for frame_num in 1..i+1 {
@@ -175,4 +177,14 @@ impl Ord for Game {
     fn cmp(&self, other: &Self) -> Ordering {
         self.game_date().cmp(&other.game_date())
     }
+}
+
+fn html_page(page_path: &Path, root_path: &Path) -> File {
+    let mut file = File::create(page_path).unwrap();
+    file.write("<head>\n".as_ref()).unwrap();
+    file.write(format!("<link type='text/css' rel='stylesheet' href='{}/style.css'>\n", root_path.to_str().unwrap()).as_ref()).unwrap();
+    file.write("</head>\n".as_ref()).unwrap();
+    file.write("<body>\n".as_ref()).unwrap();
+
+    file
 }
