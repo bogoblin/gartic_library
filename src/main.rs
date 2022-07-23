@@ -17,45 +17,47 @@ fn main() {
     fs::copy(Path::new("./style.css"), output_path.join("style.css")).unwrap();
 
     let mut html_page = html_page(output_path.join("index.html").as_path(), Path::new("."));
-    html_page.write("<ul class='games'>".as_ref()).unwrap();
+    html_page.write("<h1>Gartic Phone Games</h1>".as_ref()).unwrap();
+    html_page.write("<section class='games'>".as_ref()).unwrap();
     let mut handles = vec![];
     for game in games {
         let mut preview_images = String::new();
         for round_num in 1..=game.rounds.len() {
             preview_images.push_str(format!("<img src='{}/{:02}/01.png'>", game.dir().to_str().unwrap(),  round_num).as_ref());
         }
-        html_page.write(format!("<li class='game'><a href='{}'>\
-        <h2>{}</h2>\
+        html_page.write(format!("<a class='game' href='{}'>\
+        <div class='date'>{}</div>\
         {}\
-        </a></li>", game.dir().to_str().unwrap(), game.game_date(), preview_images.as_str()).as_ref()).unwrap();
+        </a>", game.dir().to_str().unwrap(), game.game_date(), preview_images.as_str()).as_ref()).unwrap();
 
         output_game(&output_path, game, &mut handles);
     }
     for handle in handles {
         handle.join().unwrap();
     }
-    html_page.write("</ul>".as_ref()).unwrap();
+    html_page.write("</section>".as_ref()).unwrap();
 }
 
 fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>) {
     let game_dir = output_dir.join(game.dir());
-    let mut i = 0;
-    for round in game.rounds {
-        i+=1;
+    let num_rounds = game.rounds.len();
+
+    // Output game html
+    let mut html_page = html_page(game_dir.join("index.html").as_path(), Path::new("../../../.."));
+    html_page.write(format!("<a href='../../../..'>Back</a>\n").as_ref()).unwrap();
+    html_page.write(format!("<h1 class='date'>{}</h1>", game.game_date()).as_ref()).unwrap();
+    html_page.write("<section class='rounds'>\n".as_ref()).unwrap();
+    for round_num in 1..=num_rounds {
+        html_page.write(format!("<a class='round' href='{:02}'><img src='{:02}/round.gif'></a>\n", round_num, round_num).as_ref()).unwrap();
+    }
+    html_page.write("</section>\n".as_ref()).unwrap();
+
+    for (i, round) in game.rounds.into_iter().enumerate() {
         let round_dir = game_dir.join(format!("{:02}", i));
         handles.push(thread::spawn(move || {
             round.output_images(round_dir);
         }));
     }
-
-    // Output game html
-    let mut html_page = html_page(game_dir.join("index.html").as_path(), Path::new("../../../.."));
-    html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
-    html_page.write("<ul class='rounds'>\n".as_ref()).unwrap();
-    for round_num in 1..i+1 {
-        html_page.write(format!("<li class='round'><a href='{:02}'><img src='{:02}/round.gif'></a></li>\n", round_num, round_num).as_ref()).unwrap();
-    }
-    html_page.write("</ul>\n".as_ref()).unwrap();
 }
 
 fn rounds_from_directory(directory_path: &Path) -> Vec<Round> {
@@ -127,11 +129,11 @@ impl Round {
         // Generate HTML page
         let mut html_page = html_page(round_dir.join("index.html").as_path(), Path::new("../../../../.."));
         html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
-        html_page.write("<ul class='frames'>\n".as_ref()).unwrap();
+        html_page.write("<section class='frames'>\n".as_ref()).unwrap();
         for frame_num in 1..i+1 {
-            html_page.write(format!("<li class='frame'><img src='{:02}.png'></li>\n", frame_num).as_ref()).unwrap();
+            html_page.write(format!("<figure class='frame'><img src='{:02}.png'></figure>\n", frame_num).as_ref()).unwrap();
         }
-        html_page.write("</ul>\n".as_ref()).unwrap();
+        html_page.write("</section>\n".as_ref()).unwrap();
 
         // Copy original gif
         fs::copy(&self.image_path, round_dir.join("round.gif")).unwrap();
@@ -183,6 +185,7 @@ fn html_page(page_path: &Path, root_path: &Path) -> File {
     let mut file = File::create(page_path).unwrap();
     file.write("<head>\n".as_ref()).unwrap();
     file.write(format!("<link type='text/css' rel='stylesheet' href='{}/style.css'>\n", root_path.to_str().unwrap()).as_ref()).unwrap();
+    file.write("<title>Gartic Phone Library</title>".as_ref()).unwrap();
     file.write("</head>\n".as_ref()).unwrap();
     file.write("<body>\n".as_ref()).unwrap();
 

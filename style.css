@@ -1,4 +1,48 @@
 body {
-    background-color: purple;
-    color: bisque;
+    background: linear-gradient(200deg,rgba(92,30,166,1) 0%,rgba(200,67,94,1) 100%);
+    background-attachment: fixed;
+    color: white;
+    font-family: sans-serif;
+}
+
+.games {
+    list-style: none;
+    padding: 0;
+}
+
+.game {
+    display: block;
+}
+
+a {
+    display: inline-block;
+    width: auto;
+    background: RGBA(0, 0, 0, 15%);
+    color: white;
+    border-radius: 8px;
+    margin: 10px;
+    padding: 10px;
+    text-decoration: none;
+}
+
+a:hover {
+    background: RGBA(0, 0, 0, 40%);
+}
+
+.game img {
+    height: 6em;
+}
+
+.game .date {
+    font-size: larger;
+    font-weight: bold;
+    margin-bottom: 0.3em;
+}
+
+.back {
+    color: white;
+}
+
+.round img {
+    height: 200px;
 }
