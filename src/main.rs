@@ -36,15 +36,9 @@ fn output_game(output_dir: &Path, game: Game, handles: &mut Vec<JoinHandle<()>>)
     // Output game html
     let mut html_page = File::create(game_dir.join("index.html")).unwrap();
     html_page.write(format!("<a href='..'>Back</a>\n").as_ref()).unwrap();
-    html_page.write("<ul>".as_ref()).unwrap();
     for round_num in 1..i+1 {
-        html_page.write(format!("<li>\
-        <a href='{:02}'>\
-        <img src='{:02}/round.gif'>\
-        </a>\
-        </li>\n", round_num, round_num).as_ref()).unwrap();
+        html_page.write(format!("<a href='{:02}'><img src='{:02}/round.gif'></a>\n", round_num, round_num).as_ref()).unwrap();
     }
-    html_page.write("</ul>".as_ref()).unwrap();
 }
 
 fn rounds_from_directory(directory_path: &Path) -> Vec<Round> {
