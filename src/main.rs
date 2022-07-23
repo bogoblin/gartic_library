@@ -19,18 +19,20 @@ fn main() {
     let mut html_page = html_page(output_path.join("index.html").as_path(), Path::new("."));
     html_page.write("<h1>Gartic Phone Games</h1>".as_ref()).unwrap();
     html_page.write("<section class='games'>".as_ref()).unwrap();
-    for game in games {
+    for chunk in games.chunks(8).into_iter() {
         let mut handles = vec![];
-        let mut preview_images = String::new();
-        for round_num in 1..=game.rounds.len() {
-            preview_images.push_str(format!("<img src='{}/{:02}/01.png'>", game.dir().to_str().unwrap(),  round_num).as_ref());
-        }
-        html_page.write(format!("<a class='game' href='{}'>\
-        <div class='date'>{}</div>\
-        {}\
-        </a>", game.dir().to_str().unwrap(), game.game_date(), preview_images.as_str()).as_ref()).unwrap();
+        for game in chunk {
+            let mut preview_images = String::new();
+            for round_num in 1..=game.rounds.len() {
+                preview_images.push_str(format!("<img src='{}/{:02}/01.png'>", game.dir().to_str().unwrap(),  round_num).as_ref());
+            }
+            html_page.write(format!("<a class='game' href='{}'>\
+                <div class='date'>{}</div>\
+                {}\
+                </a>", game.dir().to_str().unwrap(), game.game_date(), preview_images.as_str()).as_ref()).unwrap();
 
-        output_game(&output_path, game, &mut handles);
+            output_game(&output_path, game.clone(), &mut handles);
+        }
         for handle in handles {
             handle.join().unwrap();
         }
@@ -75,7 +77,7 @@ fn rounds_from_directory(directory_path: &Path) -> Vec<Round> {
 }
 
 fn games_from_rounds(rounds: Vec<Round>) -> Vec<Game> {
-    let minutes_gap = 10;
+    let minutes_gap = 6;
     let mut game_indices = Vec::new();
     let first_round = rounds.get(0).expect("No rounds");
     let mut prev_date = first_round.date;
